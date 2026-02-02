@@ -1,0 +1,98 @@
+name: Build and Release
+
+on:
+  push:
+    tags:
+      - 'v*.*.*'
+
+jobs:
+  build:
+    name: Build executables
+    runs-on: ${{ matrix.os }}
+    strategy:
+      matrix:
+        include:
+          - os: windows-latest
+            artifact_name: ThermalPlot.exe
+            asset_name: ThermalPlot-Windows.exe
+          - os: ubuntu-latest
+            artifact_name: ThermalPlot
+            asset_name: ThermalPlot-Linux
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.10'
+
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r requirements.txt
+          pip install pyinstaller
+
+      - name: Build with PyInstaller (Windows)
+        if: matrix.os == 'windows-latest'
+        run: |
+          pyinstaller ThermalPlot.spec
+
+      - name: Build with PyInstaller (Linux)
+        if: matrix.os == 'ubuntu-latest'
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y libxcb-cursor0
+          pyinstaller ThermalPlot.spec
+
+      - name: Upload artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: ${{ matrix.asset_name }}
+          path: dist/${{ matrix.artifact_name }}
+
+  release:
+    name: Create Release
+    needs: build
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Download all artifacts
+        uses: actions/download-artifact@v4
+        with:
+          path: artifacts
+
+      - name: Create Release
+        uses: softprops/action-gh-release@v1
+        with:
+          files: |
+            artifacts/ThermalPlot-Windows/ThermalPlot.exe
+            artifacts/ThermalPlot-Linux/ThermalPlot
+          body: |
+            ## ThermalPlot ${{ github.ref_name }}
+            
+            Cross-platform temperature and fan duty data recording and visualization tool.
+            
+            ### Downloads
+            - **Windows**: ThermalPlot-Windows.exe
+            - **Linux**: ThermalPlot-Linux
+            
+            ### Installation
+            1. Download the executable for your platform
+            2. (Optional) Copy the `config/` folder to the same directory for custom settings
+            3. Run the executable
+            
+            ### What's New
+            - Initial release with GUI plotting tool
+            - Support for temperature and fan duty data visualization
+            - Real-time plot customization
+            - Batch file loading support
+          draft: false
+          prerelease: false
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
