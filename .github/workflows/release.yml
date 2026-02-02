@@ -84,12 +84,18 @@ jobs:
         with:
           path: artifacts
 
+      - name: Rename artifacts
+        run: |
+          mv artifacts/ThermalPlot-Windows/ThermalPlot.exe artifacts/ThermalPlot-Windows.exe
+          mv artifacts/ThermalPlot-Linux/ThermalPlot artifacts/ThermalPlot-Linux
+          chmod +x artifacts/ThermalPlot-Linux
+
       - name: Create Release
         uses: softprops/action-gh-release@v1
         with:
           files: |
-            artifacts/ThermalPlot-Windows/ThermalPlot.exe
-            artifacts/ThermalPlot-Linux/ThermalPlot
+            artifacts/ThermalPlot-Windows.exe
+            artifacts/ThermalPlot-Linux
           body: |
             ## ThermalPlot ${{ github.ref_name }}
             
