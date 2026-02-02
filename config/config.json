@@ -1,0 +1,34 @@
+{
+    "temp_settings": {
+        "VIRTUAL_TEMP_0": {
+            "visible": true,
+            "color": "#1f77b4",
+            "style": "solid"
+        },
+        "VIRTUAL_TEMP_1": {
+            "visible": true,
+            "color": "#ff7f0e",
+            "style": "solid"
+        }
+    },
+    "fan_settings": {
+        "Fan_1": {
+            "visible": true,
+            "color": "#ff7f0e",
+            "style": "dashed"
+        },
+        "Fan_2": {
+            "visible": true,
+            "color": "#1f77b4",
+            "style": "dashed"
+        }
+    },
+    "style_settings": {
+        "title_size": 20,
+        "axis_label_size": 15,
+        "tick_label_size": 10,
+        "legend_size": 15,
+        "line_width": 3.0,
+        "legend_position": "lower right"
+    }
+}
