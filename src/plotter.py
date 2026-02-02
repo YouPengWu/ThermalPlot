@@ -33,7 +33,7 @@ class ThermalPlotter(QWidget):
         
         # Initial empty plot
         self.ax_main = self.figure.add_subplot(111)
-        self.ax_main.set_title("Thermal Overview", fontweight='bold')
+        self.ax_main.set_title("Temperature vs Fan Duty vs Time", fontweight='bold')
         self.ax_main.grid(True, linestyle=':', alpha=0.6)
         
         # Annotation for Tooltip
@@ -114,15 +114,39 @@ class ThermalPlotter(QWidget):
         ax1.tick_params(axis='both', labelsize=tick_size)
         
         # Title
-        file_name = os.path.splitext(title_suffix)[0] if title_suffix else "Data"
-        if mode_idx == 0: 
-            full_title = f"{file_name} - Temperature vs Fan Duty vs Time"
-        elif mode_idx == 1: 
-            full_title = f"{file_name} - Temperature vs Time"
-        elif mode_idx == 2: 
-            full_title = f"{file_name} - Fan Duty vs Time"
-            
-        ax1.set_title(full_title, fontweight='bold', fontsize=title_size)
+        # Get custom title settings
+        custom_title = styles.get("custom_title", "")
+        title_position = styles.get("title_position", "top")
+        
+        # Determine title text
+        if custom_title:
+            full_title = custom_title
+        else:
+            # Auto-generated title without filename
+            if mode_idx == 0: 
+                full_title = "Temperature vs Fan Duty vs Time"
+            elif mode_idx == 1: 
+                full_title = "Temperature vs Time"
+            elif mode_idx == 2: 
+                full_title = "Fan Duty vs Time"
+        
+        # Set title position
+        if title_position == "bottom":
+            # Place title below X-axis
+            ax1.set_xlabel('')  # Clear default xlabel temporarily
+            # Add title as text below the plot
+            ax1.text(0.5, -0.15, full_title, 
+                    ha='center', va='top',
+                    transform=ax1.transAxes,
+                    fontweight='bold', fontsize=title_size)
+            # Re-add X-axis label above the title
+            ax1.text(0.5, -0.08, 'Time (s)', 
+                    ha='center', va='top',
+                    transform=ax1.transAxes,
+                    fontsize=axis_size)
+        else:
+            # Default: title at top
+            ax1.set_title(full_title, fontweight='bold', fontsize=title_size)
         
         # Initialize Annotation (again because clf() wiped it)
         self.annot = ax1.annotate("", xy=(0,0), xytext=(20,20),textcoords="offset points",
@@ -170,8 +194,11 @@ class ThermalPlotter(QWidget):
                              frameon=True, facecolor='white', edgecolor='none')
             leg.get_frame().set_alpha(1.0)
 
-        # Layout Adjustment
-        self.figure.tight_layout()
+        # Layout Adjustment (increase bottom margin if title is at bottom)
+        if styles.get("title_position", "top") == "bottom":
+            self.figure.tight_layout(rect=[0, 0.08, 1, 1])  # Leave space at bottom
+        else:
+            self.figure.tight_layout()
         
         # Set Figure Background back to White
         self.figure.patch.set_facecolor('white')
@@ -204,11 +231,24 @@ class ThermalPlotter(QWidget):
             if min_len == 0: continue
             ax.plot(time_data[:min_len], values[:min_len], label=name, color=color, linestyle=linestyle, linewidth=lw, picker=5)
 
-    def save_image(self, filepath):
+    def save_image(self, filepath, width=None, height=None, dpi=300):
         try:
             if not filepath.lower().endswith(('.png', '.jpg', '.jpeg', '.pdf', '.svg')):
                 filepath += ".png"
-            self.figure.savefig(filepath, dpi=300, bbox_inches='tight') # High DPI for saved image
+            
+            # If custom dimensions provided, temporarily adjust figure size
+            if width and height:
+                # Calculate figure size in inches based on DPI
+                fig_width = width / dpi
+                fig_height = height / dpi
+                original_size = self.figure.get_size_inches()
+                self.figure.set_size_inches(fig_width, fig_height)
+                self.figure.savefig(filepath, dpi=dpi, bbox_inches='tight')
+                # Restore original size
+                self.figure.set_size_inches(original_size)
+            else:
+                self.figure.savefig(filepath, dpi=dpi, bbox_inches='tight')
+            
             return True
         except Exception as e:
             return str(e)

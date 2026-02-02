@@ -69,6 +69,90 @@ class ConfigRow(QWidget):
         self.settings['style'] = text
         self.window().update_plot()
 
+class ImageSizeDialog(QDialog):
+    def __init__(self, config_manager, parent=None):
+        super().__init__(parent)
+        self.setWindowTitle("Image Export Settings")
+        self.setMinimumWidth(350)
+        self.config_manager = config_manager
+        
+        layout = QFormLayout(self)
+        
+        # Load saved settings
+        saved_settings = config_manager.config.get('image_export_settings', {})
+        saved_width = saved_settings.get('width', 2560)
+        saved_height = saved_settings.get('height', 1440)
+        saved_dpi = saved_settings.get('dpi', 300)
+        
+        # Preset sizes
+        self.combo_preset = QComboBox()
+        self.presets = {
+            "HD (1920x1080)": (1920, 1080),
+            "Full HD (2560x1440)": (2560, 1440),
+            "4K (3840x2160)": (3840, 2160),
+            "A4 Portrait (2480x3508)": (2480, 3508),
+            "A4 Landscape (3508x2480)": (3508, 2480),
+            "Custom": (0, 0)
+        }
+        self.combo_preset.addItems(list(self.presets.keys()))
+        self.combo_preset.setCurrentText("Full HD (2560x1440)")  # Default preset
+        self.combo_preset.currentTextChanged.connect(self.on_preset_changed)
+        layout.addRow("Preset Size:", self.combo_preset)
+        
+        # Width
+        self.spin_width = QSpinBox()
+        self.spin_width.setRange(100, 10000)
+        self.spin_width.setValue(saved_width)
+        self.spin_width.setSuffix(" px")
+        layout.addRow("Width:", self.spin_width)
+        
+        # Height
+        self.spin_height = QSpinBox()
+        self.spin_height.setRange(100, 10000)
+        self.spin_height.setValue(saved_height)
+        self.spin_height.setSuffix(" px")
+        layout.addRow("Height:", self.spin_height)
+        
+        # DPI
+        self.spin_dpi = QSpinBox()
+        self.spin_dpi.setRange(72, 600)
+        self.spin_dpi.setValue(saved_dpi)
+        self.spin_dpi.setSuffix(" dpi")
+        layout.addRow("DPI:", self.spin_dpi)
+        
+        # Buttons
+        btn_box = QHBoxLayout()
+        ok_btn = QPushButton("OK")
+        ok_btn.clicked.connect(self.on_ok_clicked)
+        cancel_btn = QPushButton("Cancel")
+        cancel_btn.clicked.connect(self.reject)
+        btn_box.addStretch()
+        btn_box.addWidget(ok_btn)
+        btn_box.addWidget(cancel_btn)
+        layout.addRow(btn_box)
+    
+    def on_preset_changed(self, preset_name):
+        if preset_name in self.presets and preset_name != "Custom":
+            width, height = self.presets[preset_name]
+            self.spin_width.setValue(width)
+            self.spin_height.setValue(height)
+    
+    def on_ok_clicked(self):
+        # Save settings to config before closing
+        self.config_manager.config['image_export_settings'] = {
+            'width': self.spin_width.value(),
+            'height': self.spin_height.value(),
+            'dpi': self.spin_dpi.value()
+        }
+        self.accept()
+    
+    def get_settings(self):
+        return {
+            'width': self.spin_width.value(),
+            'height': self.spin_height.value(),
+            'dpi': self.spin_dpi.value()
+        }
+
 class StyleSettingsDialog(QDialog):
     def __init__(self, settings, callback, parent=None):
         super().__init__(parent)
@@ -125,6 +209,26 @@ class StyleSettingsDialog(QDialog):
         self.spin_linewidth.setSingleStep(0.5)
         self.spin_linewidth.setValue(settings.get('line_width', 2.5))
         layout.addRow("Line Width:", self.spin_linewidth)
+        
+        # Custom Title
+        self.input_custom_title = QLineEdit()
+        self.input_custom_title.setText(settings.get('custom_title', ''))
+        self.input_custom_title.setPlaceholderText("Leave empty for auto-generated title")
+        layout.addRow("Custom Title:", self.input_custom_title)
+        
+        # Title Position
+        self.combo_title_pos = QComboBox()
+        self.title_positions = {
+            "Top": "top",
+            "Bottom (below X-axis)": "bottom"
+        }
+        self.combo_title_pos.addItems(list(self.title_positions.keys()))
+        current_title_pos = settings.get('title_position', 'top')
+        for k, v in self.title_positions.items():
+            if v == current_title_pos:
+                self.combo_title_pos.setCurrentText(k)
+                break
+        layout.addRow("Title Position:", self.combo_title_pos)
 
         # Connect all signals for real-time update
         self.spin_title.valueChanged.connect(self.on_changed)
@@ -133,6 +237,8 @@ class StyleSettingsDialog(QDialog):
         self.spin_legend.valueChanged.connect(self.on_changed)
         self.spin_linewidth.valueChanged.connect(self.on_changed)
         self.combo_legend_pos.currentTextChanged.connect(self.on_changed)
+        self.input_custom_title.textChanged.connect(self.on_changed)
+        self.combo_title_pos.currentTextChanged.connect(self.on_changed)
         
         # Add a Close button instead of Apply
         btn_box = QHBoxLayout()
@@ -149,7 +255,9 @@ class StyleSettingsDialog(QDialog):
             'tick_label_size': self.spin_tick.value(),
             'legend_size': self.spin_legend.value(),
             'line_width': self.spin_linewidth.value(),
-            'legend_position': self.legend_positions[self.combo_legend_pos.currentText()]
+            'legend_position': self.legend_positions[self.combo_legend_pos.currentText()],
+            'title_position': self.title_positions[self.combo_title_pos.currentText()],
+            'custom_title': self.input_custom_title.text()  # Passed for immediate use but not saved
         }
         self.callback(new_styles)
 
@@ -612,9 +720,17 @@ class MainWindow(QMainWindow):
                 QMessageBox.critical(self, "Error", f"Failed to load config: {e}")
 
     def save_plot_image(self):
+        # First, show size selection dialog
+        size_dialog = ImageSizeDialog(self.config_manager, self)
+        if size_dialog.exec() != QDialog.DialogCode.Accepted:
+            return  # User cancelled
+        
+        settings = size_dialog.get_settings()
+        
+        # Then show file save dialog
         f, _ = QFileDialog.getSaveFileName(self, "Save Image", "plot.png", "Images (*.png *.jpg)")
         if f:
-            result = self.plotter.save_image(f)
+            result = self.plotter.save_image(f, settings['width'], settings['height'], settings['dpi'])
             if result is True:
                 QMessageBox.information(self, "Success", f"Image saved to {f}")
             else:

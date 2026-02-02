@@ -13,7 +13,13 @@ class ConfigManager:
                 "tick_label_size": 10,
                 "legend_size": 12,
                 "line_width": 2.5,
-                "legend_position": "lower right"
+                "legend_position": "lower right",
+                "title_position": "top"
+            },
+            "image_export_settings": {
+                "width": 2560,
+                "height": 1440,
+                "dpi": 300
             }
         }
         self.config = self.load_config()

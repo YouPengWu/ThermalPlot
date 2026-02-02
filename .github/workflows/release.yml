@@ -7,17 +7,8 @@ on:
 
 jobs:
   build:
-    name: Build executables
-    runs-on: ${{ matrix.os }}
-    strategy:
-      matrix:
-        include:
-          - os: windows-latest
-            artifact_name: ThermalPlot.exe
-            asset_name: ThermalPlot-Windows.exe
-          - os: ubuntu-latest
-            artifact_name: ThermalPlot
-            asset_name: ThermalPlot-Linux
+    name: Build Windows executable
+    runs-on: windows-latest
 
     steps:
       - name: Checkout code
@@ -34,40 +25,15 @@ jobs:
           pip install -r requirements.txt
           pip install pyinstaller
 
-      - name: Build with PyInstaller (Windows)
-        if: matrix.os == 'windows-latest'
+      - name: Build with PyInstaller
         run: |
-          pyinstaller --onefile --windowed --name ThermalPlot src/main.py
-
-      - name: Build with PyInstaller (Linux)
-        if: matrix.os == 'ubuntu-latest'
-        run: |
-          sudo apt-get update
-          sudo apt-get install -y \
-            libxcb-cursor0 \
-            libxcb-xinerama0 \
-            libxcb-icccm4 \
-            libxcb-image0 \
-            libxcb-keysyms1 \
-            libxcb-randr0 \
-            libxcb-render-util0 \
-            libxcb-shape0 \
-            libxkbcommon-x11-0 \
-            libdbus-1-3 \
-            libgl1 \
-            libegl1 \
-            libfontconfig1 \
-            libxrender1 \
-            libxi6 \
-            libxext6 \
-            x11-utils
           pyinstaller --onefile --windowed --name ThermalPlot src/main.py
 
       - name: Upload artifact
         uses: actions/upload-artifact@v4
         with:
-          name: ${{ matrix.asset_name }}
-          path: dist/${{ matrix.artifact_name }}
+          name: ThermalPlot-Windows.exe
+          path: dist/ThermalPlot.exe
 
   release:
     name: Create Release
@@ -84,37 +50,37 @@ jobs:
         with:
           path: artifacts
 
-      - name: Rename artifacts
+      - name: List artifacts (debug)
         run: |
-          mv artifacts/ThermalPlot-Windows/ThermalPlot.exe artifacts/ThermalPlot-Windows.exe
-          mv artifacts/ThermalPlot-Linux/ThermalPlot artifacts/ThermalPlot-Linux
-          chmod +x artifacts/ThermalPlot-Linux
+          ls -R artifacts
 
       - name: Create Release
         uses: softprops/action-gh-release@v1
         with:
-          files: |
-            artifacts/ThermalPlot-Windows.exe
-            artifacts/ThermalPlot-Linux
+          files: artifacts/*/*
           body: |
             ## ThermalPlot ${{ github.ref_name }}
             
-            Cross-platform temperature and fan duty data recording and visualization tool.
+            A Windows GUI tool for visualizing BMC temperature and fan duty data.
             
-            ### Downloads
-            - **Windows**: ThermalPlot-Windows.exe
-            - **Linux**: ThermalPlot-Linux
+            ### Download
+            - **ThermalPlot-Windows.exe** - Windows GUI application
             
             ### Installation
-            1. Download the executable for your platform
+            1. Download ThermalPlot-Windows.exe
             2. (Optional) Copy the `config/` folder to the same directory for custom settings
             3. Run the executable
             
-            ### What's New
-            - Initial release with GUI plotting tool
-            - Support for temperature and fan duty data visualization
-            - Real-time plot customization
+            ### Features
+            - GUI plotting tool for thermal data visualization
+            - Support for temperature and fan duty data from IPMI
+            - Customizable plot styles (fonts, colors, legend position, title position)
+            - Custom image export with selectable dimensions and DPI
             - Batch file loading support
+            - Interactive charts with hover tooltips
+            
+            ### Data Collection
+            Data collection scripts support both Windows and Linux. Use the appropriate script from the `scripts/` folder to record IPMI thermal data.
           draft: false
           prerelease: false
         env:

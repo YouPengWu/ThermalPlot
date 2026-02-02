@@ -1,6 +1,9 @@
 # ThermalPlot (Temperature/Duty Plotting Tool)
 
-A cross-platform (Windows/Linux) tool designed for recording BMC temperature and fan duty data, providing a graphical user interface (GUI) for data parsing and visualization.
+A Windows GUI tool for visualizing BMC temperature and fan duty data.
+
+- **GUI Application**: Windows only
+- **Data Collection Scripts**: Cross-platform (Windows/Linux via IPMI)
 
 ---
 
@@ -11,11 +14,8 @@ ThermalPlot/
 ├── scripts/                # Recording and packaging scripts
 │   ├── record_thermal.sh   # Linux recording script (requires ipmitool)
 │   ├── record_thermal.bat  # Windows recording script (requires ipmitool)
-│   ├── build_linux.sh      # Linux build script
 │   ├── build_windows.bat   # Windows build script
-│   ├── run_app.sh          # Linux run script
-│   ├── run_app.bat         # Windows run script
-│   └── install.sh          # Linux environment setup
+│   └── run_app.bat         # Windows run script
 ├── config/                 # Configuration files
 │   └── config.json         # Stores font sizes, colors, and UI settings
 ├── docs/                   # Documentation and assets
@@ -57,15 +57,6 @@ Developed using Python (PyQt6 + Matplotlib).
 ### Environment Setup
 If running for the first time or using source mode:
 
-**Linux**:
-```bash
-# 1. Install system dependencies (if needed)
-sudo apt-get install libxcb-cursor0
-
-# 2. Automatically install Python environment and launch
-bash scripts/run_app.sh
-```
-
 **Windows**:
 *   Double-click `scripts\run_app.bat` (The script will automatically create a virtual environment).
 
@@ -82,13 +73,7 @@ bash scripts/run_app.sh
 
 ## 5. Packaging (Executable)
 
-Pack the application into a standalone `.exe` or binary for environments without Python.
-
-### Linux Packaging
-```bash
-bash scripts/build_linux.sh
-# Output: dist/ThermalPlot
-```
+Pack the application into a standalone `.exe` for environments without Python.
 
 ### Windows Packaging
 1.  Double-click `scripts\build_windows.bat`.
